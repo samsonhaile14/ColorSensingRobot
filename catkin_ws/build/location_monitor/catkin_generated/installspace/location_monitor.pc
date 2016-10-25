@@ -1,0 +1,8 @@
+prefix=/home/samson/catkin_ws/install
+
+Name: location_monitor
+Description: Description of location_monitor
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/samson/catkin_ws/install/lib 
+Requires: nav_msgs roscpp rospy
