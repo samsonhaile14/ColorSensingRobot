@@ -1,0 +1,2 @@
+location_monitor
+-DCATKIN_DEVEL_PREFIX=/home/samson/ColorSensingRobot/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/samson/ColorSensingRobot/catkin_ws/install -G Unix Makefiles

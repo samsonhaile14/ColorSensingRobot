@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/samson/ColorSensingRobot/catkin_ws/devel/setup.sh
