@@ -3,11 +3,27 @@ CPE 470 Project
 _  
 Instructions for running simulations(tested using kinetic distro):  
 _  
-The program is designed to be run in a linux environment. First, ensure that the
-turtlebot simulator is installed before continuing. Instructions for doing so
-can be found in this video tutorial: (URL: https://www.youtube.com/watch?v=9U6GDonGFHw ).
-Note that some of the distro specific commands will need to be replaced with the
-ROS distro being used.In addition, catkin must be installed on the distro in 
+The program is designed to be run in a linux environment.
+_  
+First, ensure that the turtlebot simulator is installed before continuing. 
+Instructions for doing so can be found in this video tutorial: 
+(URL: https://www.youtube.com/watch?v=9U6GDonGFHw)  
+Special Notes:  
+The video uses the indigo distro for installation, so use:
+```  
+apt-cache search turtlebot
+```  
+to determine the name of the kinetic packages and install those instead if using
+ros kinteic. Also, ensure that the package 'ros-kinetic-turtlebot-gazebo' 
+is installed in case it is not. After this, source the environment variables with
+the command:
+```  
+source /opt/ros/indigo/setup.bash
+```  
+These instructions along with the video should ensure the installation of the turtlebot
+simulator.  
+_  
+In addition, catkin must be installed on the distro in 
 order to run related ROS packages. This is done with terminal command:  
 ```  
 sudo apt-get install ros-(distro)-catkin  
