@@ -18,9 +18,10 @@ ros kinteic. Also, ensure that the package 'ros-kinetic-turtlebot-gazebo'
 is installed in case it is not. After this, source the environment variables with
 the command:
 ```  
-source /opt/ros/indigo/setup.bash
+source /opt/ros/(distro)/setup.bash
 ```  
-These instructions along with the video should ensure the installation of the turtlebot
+Where (distro) denotes the version of ROS being used. These instructions, along 
+with the video should ensure the installation of the turtlebot
 simulator.  
 _  
 In addition, catkin must be installed on the distro in 
@@ -63,6 +64,11 @@ that the kinetic distro is new and suffers from some bugs. In this event, I find
 that the turtlebot_gazebo command will have to be run several times in a
 trial-and-error fashion until the simulation successfully starts up.  
 _  
+Prior to running the program, the project's setup.bash must be sourced with the
+following command:
+```  
+source (path to repository directory)/ColorSensingRobot/catkin_ws/devel/setup.bash
+```  
 Lastly, in the terminal for the program, run the command:
 ```  
 rosrun location_monitor location_monitor_node  
