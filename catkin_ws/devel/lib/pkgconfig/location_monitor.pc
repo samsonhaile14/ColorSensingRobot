@@ -1,8 +1,8 @@
-prefix=/home/samson/ColorSensingRobot/catkin_ws/devel
+prefix=/home/samson/catkin_ws/devel
 
 Name: location_monitor
 Description: Description of location_monitor
 Version: 0.0.0
 Cflags: 
-Libs: -L/home/samson/ColorSensingRobot/catkin_ws/devel/lib 
+Libs: -L/home/samson/catkin_ws/devel/lib 
 Requires: geometry_msgs nav_msgs roscpp rospy std_msgs

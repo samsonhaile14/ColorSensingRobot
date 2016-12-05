@@ -3,10 +3,15 @@
 #include "geometry_msgs/Twist.h"
 
 #include <vector>
+#include <cmath>
+
+#define PI 3.14159265
 
 struct Vert{
 
 double x, y;
+double vX;
+double oT;
 
 };
 
@@ -64,6 +69,20 @@ void LandmarkRegion::CalculateLines()
 
 bool LandmarkRegion::DeterminePoint( Vert pos )
 {
+
+   if( (pos.x > points[0].x && pos.y > points[0].y) &&
+       (pos.x < points[1].x && pos.y > points[1].y) &&
+       (pos.x < points[2].x && pos.y < points[2].y) &&
+       (pos.x > points[3].x && pos.y < points[3].y) ){
+      return true;
+   }
+
+   else{
+      return false;
+   }
+
+
+/*
    if(points.size() == 0 || cofA.size() < 3)
       return false;
 
@@ -103,12 +122,8 @@ bool LandmarkRegion::DeterminePoint( Vert pos )
 
       }
 
-   if(inside){
-      ROS_INFO("Entering colored region");
-   }
-
    return inside; 
-
+*/
    
 }
 
@@ -143,62 +158,185 @@ bool LandmarkRegion::FindIntersection( double rayCofA, double rayCofB,
 
 
 //globals
-Vert robPos;   //global variable to communicate pos between callback and main
+   Vert robPos;   //global variable to communicate pos between callback and main
 
-void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg){
-   robPos.x = msg->pose.pose.position.x;
-   robPos.y = msg->pose.pose.position.y;
+//function prototypes
+   void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+   double radToDegree( double x, double rad);
 
-   ROS_INFO("x: %f, y: %f", robPos.x, robPos.y);
-}
 
 int main(int argc, char** argv) {
+
+   robPos.x = robPos.y = robPos.vX = robPos.oT = 0;
 
    geometry_msgs::Twist dir;
    dir.linear.x=dir.linear.y=dir.linear.z=0;
    dir.angular.x=dir.angular.y=dir.angular.z=0;
 
-   std::vector<Vert> data;
-   Vert temp;
-   temp.x = 5.0;
-   temp.y = -1.0;
-   data.push_back( temp );
-   temp.x = 7.0;
-   temp.y = -1.0;
-   data.push_back( temp );
-   temp.x = 7.0;
-   temp.y = 1.0;
-   data.push_back( temp );
-   temp.x = 5.0;
-   temp.y = 1.0;
-   data.push_back( temp );
+   //set list of travel points
+      Vert temp;
+      std::vector< Vert > dest;
+      temp.x = 6.0;
+      temp.y = 0.0;
+      dest.push_back( temp );
+      temp.x = 4.0;
+      temp.y = 5.0;
+      dest.push_back( temp );
+      temp.x = -2.0;
+      temp.y = 5.0;
+      dest.push_back( temp );
+      temp.x = 0.0;
+      temp.y = 0.0;
+      dest.push_back( temp );
 
-   LandmarkRegion colorSquare( data );
 
-   dir.linear.x = 0.2;
+   //create list of colored square coordinates
+      std::vector<Vert> data;
+      std::vector< LandmarkRegion > colorPath;
+      double halfWidth = 1.0;
+      temp.x = dest[dest.size()-1].x - halfWidth;
+      temp.y = dest[dest.size()-1].y - halfWidth;
+      data.push_back( temp );
+      temp.x = dest[dest.size()-1].x + halfWidth;
+      temp.y = dest[dest.size()-1].y - halfWidth;
+      data.push_back( temp );
+      temp.x = dest[dest.size()-1].x + halfWidth;
+      temp.y = dest[dest.size()-1].y + halfWidth;
+      data.push_back( temp );
+      temp.x = dest[dest.size()-1].x - halfWidth;
+      temp.y = dest[dest.size()-1].y + halfWidth;
+      data.push_back( temp );
+      LandmarkRegion colorSquare( data );       //Class object representing colored squares
+      colorPath.push_back( colorSquare );
+
+      for( int a = 0; a < (dest.size() - 1); a++ ){
+         data.clear();
+         temp.x = dest[a].x - halfWidth;
+         temp.y = dest[a].y - halfWidth;
+         data.push_back( temp );
+         temp.x = dest[a].x + halfWidth;
+         temp.y = dest[a].y - halfWidth;
+         data.push_back( temp );
+         temp.x = dest[a].x + halfWidth;
+         temp.y = dest[a].y + halfWidth;
+         data.push_back( temp );
+         temp.x = dest[a].x - halfWidth;
+         temp.y = dest[a].y + halfWidth;
+         data.push_back( temp );
+         LandmarkRegion colSquare( data );       //Class object representing colored squares
+         colorPath.push_back( colSquare );
+      }
+
+
+
+   dir.linear.x = 0.2;                    //preset velocity
+   dir.angular.z = 0.0;
 
    ros::init(argc,argv, "location_monitor");
    ros::NodeHandle nh;
-   ros::Subscriber sub = nh.subscribe( "odom", 1, OdomCallback);
-   ros::Publisher pub = nh.advertise<geometry_msgs::Twist>     
-                                    ("cmd_vel_mux/input/teleop", 1 );
+   ros::Subscriber sub = nh.subscribe( "odom", 1, OdomCallback);//keeps track of robot position
+   ros::Publisher pub = nh.advertise<geometry_msgs::Twist>      //updates robot movement 
+                              ("cmd_vel_mux/input/teleop", 1 );
    ros::Rate loop_rate(50);
 
-while(ros::ok())
-{
-    pub.publish(dir);
-    ros::spinOnce();
-    if(colorSquare.DeterminePoint( robPos )){
-      dir.angular.x = 25;
-    }
+   Vert targetDest;
+   targetDest.x = 0;
+   targetDest.y = 0;
 
-    else{
-      dir.angular.x = 0;
-    }
-}
+   double pr_max = 0.3;
+   double lambda = 1.0;
+   double turnStrength = 0.25;
 
-   pub.publish(dir);
+   //main loop of operation
+   while(ros::ok())
+   {
+
+       for( int a = 0; a < colorPath.size(); a++ ){
+         if(colorPath[a].DeterminePoint( robPos ) ){
+            ROS_INFO("Driving over colored square %d", a+1);
+            targetDest.x = dest[a].x;
+            targetDest.y = dest[a].y;
+         }
+       }
+
+      //path plan based on robotPosition and targetDest
+         double dirVecX = targetDest.x - robPos.x;
+         double dirVecY = targetDest.y - robPos.y;
+
+         double distQrt = std::sqrt(dirVecX * dirVecX + dirVecY * dirVecY);
+
+         double rho = 90.0+radToDegree(dirVecX,atan( dirVecY/dirVecX ));
+         
+         double newVel = sqrt( lambda * lambda * distQrt * distQrt );
+
+         newVel = std::min( newVel, pr_max );   //cap velocity of robot
+
+         double newTheta = rho;
+
+      //make changes through multiplexer
+         dir.linear.x = newVel;
+
+         if(robPos.oT > newTheta){
+
+            double valA = 360.0 - robPos.oT + newTheta;
+            double valB = robPos.oT - newTheta;
+
+            if(valA > valB){
+               dir.angular.z = -1.0 * turnStrength;
+            }
+            else{
+               dir.angular.z = turnStrength;
+            }
+
+         }
+
+         else if( robPos.oT < newTheta ){
+
+            double valA = newTheta - robPos.oT;
+            double valB = robPos.oT + (360.0-newTheta);
+
+            if(valA > valB){
+               dir.angular.z = -1.0 * turnStrength;
+            }
+            else{
+               dir.angular.z = turnStrength;
+            }
+         }
+
+      //publish info
+       pub.publish(dir);
+       ros::spinOnce();
+
+   }
 
    return 0;
 
 }
+
+//function implementations
+   void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg){
+      Vert lastPos = robPos;
+
+      robPos.x = msg->pose.pose.position.x;
+      robPos.y = msg->pose.pose.position.y;
+      robPos.vX = msg->twist.twist.linear.x;
+      robPos.oT = 90.0+radToDegree((robPos.x - lastPos.x),atan( (robPos.y - lastPos.y)/ (robPos.x - lastPos.x) ));
+         
+
+      ROS_INFO("x: %f, y: %f, vX: %f, oT: %f", robPos.x, robPos.y, robPos.vX, robPos.oT);
+
+   }
+
+   double radToDegree( double x, double rad){
+
+      if( x < 0 ){
+         return ( rad / PI ) * 180.0;
+      }
+
+      else{
+         return ( rad / PI ) * 180.0 + 180.0;
+      }
+
+   }
+
+
